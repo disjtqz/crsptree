@@ -135,6 +135,12 @@ struct CRSPTREE_NAMESPACE {
 		rbnode_t* left(CRSPTREE_MEMORYSPACE_PARAM) {
 			return CRSPTREE_TRANSLATE_POINTER(rbnode_t, m_right_to_left[1]);
 		}
+        rbnode_t* right_nonnull(CRSPTREE_MEMORYSPACE_PARAM) {
+            return CRSPTREE_TRANSLATE_NONNULL_POINTER(rbnode_t, m_right_to_left[0]);
+        }
+        rbnode_t* left_nonnull(CRSPTREE_MEMORYSPACE_PARAM) {
+            return CRSPTREE_TRANSLATE_NONNULL_POINTER(rbnode_t, m_right_to_left[1]);
+        }
 
         CRSPTREE_PACKED_POINTER_TYPE(rbnode_t) parent_packed() {
             return m_parent.node_packed();
@@ -152,6 +158,13 @@ struct CRSPTREE_NAMESPACE {
 		void set_left(CRSPTREE_DEFINE_PARAMS_WITH_MEMORYSPACE(rbnode_t* new_left)) {
 			m_right_to_left[1] = CRSPTREE_UNTRANSLATE_POINTER(new_left);
 		}
+        
+        void set_right_packed(CRSPTREE_PACKED_POINTER_TYPE(rbnode_t) new_right) {
+            m_right_to_left[0] = new_right;
+        }
+        void set_left_packed(CRSPTREE_PACKED_POINTER_TYPE(rbnode_t) new_left) {
+            m_right_to_left[1] = new_left;
+        }
 
 		const rbnode_t* parent(CRSPTREE_MEMORYSPACE_PARAM) const {
 			return m_parent.node(CRSPTREE_PASS_MEMORYSPACE_PARAM);
@@ -474,13 +487,15 @@ struct CRSPTREE_NAMESPACE {
 					if (node_child)
 						node_child->set_parent_node(CRSPTREE_PASS_PARAMS_WITH_MEMORYSPACE(erased_node_parent));
 					erased_node_parent->set_left(CRSPTREE_PASS_PARAMS_WITH_MEMORYSPACE(node_child));
-					leftmost_node->set_right(CRSPTREE_PASS_PARAMS_WITH_MEMORYSPACE(node_to_erase->right(CRSPTREE_PASS_MEMORYSPACE_PARAM)));
 
-					node_to_erase->right(CRSPTREE_PASS_MEMORYSPACE_PARAM)->set_parent_node(CRSPTREE_PASS_PARAMS_WITH_MEMORYSPACE(leftmost_node));
+                    leftmost_node->set_right_packed(node_to_erase->right_packed());
+
+					node_to_erase->right_nonnull(CRSPTREE_PASS_MEMORYSPACE_PARAM)->set_parent_node_nonnull(CRSPTREE_PASS_PARAMS_WITH_MEMORYSPACE(leftmost_node));
 				}
 				leftmost_node->m_parent = node_to_erase->m_parent;
-				leftmost_node->set_left(CRSPTREE_PASS_PARAMS_WITH_MEMORYSPACE(node_to_erase->left(CRSPTREE_PASS_MEMORYSPACE_PARAM)));
-				node_to_erase->left(CRSPTREE_PASS_MEMORYSPACE_PARAM)->set_parent_node(CRSPTREE_PASS_PARAMS_WITH_MEMORYSPACE(leftmost_node));
+                leftmost_node->set_left_packed(node_to_erase->left_packed());
+
+				node_to_erase->left_nonnull(CRSPTREE_PASS_MEMORYSPACE_PARAM)->set_parent_node_nonnull(CRSPTREE_PASS_PARAMS_WITH_MEMORYSPACE(leftmost_node));
 				if (!leftmost_parent.black()) {
 					return;
 				}
@@ -507,7 +522,7 @@ struct CRSPTREE_NAMESPACE {
 
 					rbnode_t* parent_left = erased_node_parent->left(CRSPTREE_PASS_MEMORYSPACE_PARAM);
 					uint32_t parent_subnode_offset = offset_for_left_if_neq(parent_left, current_node);
-					rbnode_t* parent_subnode = CRSPTREE_TRANSLATE_POINTER(rbnode_t, erased_node_parent->subnode_from_offset(parent_subnode_offset));
+					rbnode_t* parent_subnode = CRSPTREE_TRANSLATE_NONNULL_POINTER(rbnode_t, erased_node_parent->subnode_from_offset(parent_subnode_offset));
 					if (parent_subnode->red())
 					{
 
@@ -527,7 +542,7 @@ struct CRSPTREE_NAMESPACE {
 							dual_rotate:
 								{
 									auto eqnodeoffs = offset_for_left_if_eq(parent_left, current_node);
-									CRSPTREE_TRANSLATE_POINTER(rbnode_t, parent_subnode->subnode_from_offset(offset_for_dual_rotate_label))->blacken();
+									CRSPTREE_TRANSLATE_NONNULL_POINTER(rbnode_t, parent_subnode->subnode_from_offset(offset_for_dual_rotate_label))->blacken();
 									parent_subnode->redden();
 									rotate_by_offset(CRSPTREE_PASS_PARAMS_WITH_MEMORYSPACE(parent_subnode, eqnodeoffs, tree_root));
 									parent_subnode = CRSPTREE_TRANSLATE_POINTER(rbnode_t, erased_node_parent->subnode_from_offset(rbnode_t::invert_lr_offset(eqnodeoffs)));
@@ -540,7 +555,7 @@ struct CRSPTREE_NAMESPACE {
 							parent_subnode->set_color(erased_node_parent->color());
 							erased_node_parent->blacken();
 
-							CRSPTREE_TRANSLATE_POINTER(rbnode_t, parent_subnode->subnode_from_offset(offset2))->blacken();
+							CRSPTREE_TRANSLATE_NONNULL_POINTER(rbnode_t, parent_subnode->subnode_from_offset(offset2))->blacken();
 							rotate_by_offset(CRSPTREE_PASS_PARAMS_WITH_MEMORYSPACE(erased_node_parent, offset2, tree_root));
 						}
 						current_node = CRSPTREE_TRANSLATE_POINTER (rbnode_t, *tree_root);
