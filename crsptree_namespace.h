@@ -52,6 +52,12 @@ struct CRSPTREE_NAMESPACE {
 		rbnode_t* node(CRSPTREE_MEMORYSPACE_PARAM) {
 			return CRSPTREE_TRANSLATE_POINTER(rbnode_t, m_value & CRSPTREE_PARENT_MASK);
 		}
+        rbnode_t* node_nonnull(CRSPTREE_MEMORYSPACE_PARAM) {
+            return CRSPTREE_TRANSLATE_NONNULL_POINTER(rbnode_t, m_value & CRSPTREE_PARENT_MASK);
+        }
+        CRSPTREE_PACKED_POINTER_TYPE(rbnode_t) node_packed() {
+            return (CRSPTREE_PACKED_POINTER_TYPE(rbnode_t))(m_value & CRSPTREE_PARENT_MASK);
+        }
 
 		const rbnode_t* node(CRSPTREE_MEMORYSPACE_PARAM) const {
 			return CRSPTREE_TRANSLATE_POINTER(rbnode_t, m_value & CRSPTREE_PARENT_MASK);
@@ -130,6 +136,16 @@ struct CRSPTREE_NAMESPACE {
 			return CRSPTREE_TRANSLATE_POINTER(rbnode_t, m_right_to_left[1]);
 		}
 
+        CRSPTREE_PACKED_POINTER_TYPE(rbnode_t) parent_packed() {
+            return m_parent.node_packed();
+        }
+        CRSPTREE_PACKED_POINTER_TYPE(rbnode_t) right_packed() {
+            return m_right_to_left[0];
+        }
+        CRSPTREE_PACKED_POINTER_TYPE(rbnode_t) left_packed() {
+            return m_right_to_left[1];
+        }
+
 		void set_right(CRSPTREE_DEFINE_PARAMS_WITH_MEMORYSPACE(rbnode_t* new_right)) {
 			m_right_to_left[0] = CRSPTREE_UNTRANSLATE_POINTER(new_right);
 		}
@@ -189,14 +205,15 @@ struct CRSPTREE_NAMESPACE {
 
 	static constexpr uint32_t node_offsetof_right = crsptree_offsetof_m(rbnode_t, m_right_to_left[0]);
 	static constexpr uint32_t node_offsetof_left = crsptree_offsetof_m(rbnode_t, m_right_to_left[1]);
-
-	static uint32_t offset_for_left_if_neq(rbnode_t* x, rbnode_t* y) {
+    template<typename NodeRefType>
+	static uint32_t offset_for_left_if_neq(NodeRefType x, NodeRefType y) {
 		uint32_t offset = node_offsetof_right;
 
 		offset += static_cast<uint32_t>(x != y) * sizeof(CRSPTREE_PACKED_UINTPTR_TYPE());
 		return offset;
 	}
-	static uint32_t offset_for_left_if_eq(rbnode_t* x, rbnode_t* y) {
+    template<typename NodeRefType>
+	static uint32_t offset_for_left_if_eq(NodeRefType x, NodeRefType y) {
 		uint32_t offset = node_offsetof_right;
 
 		offset += static_cast<uint32_t>(x == y) * sizeof(CRSPTREE_PACKED_UINTPTR_TYPE());
@@ -313,21 +330,30 @@ struct CRSPTREE_NAMESPACE {
 		static void insert_node(CRSPTREE_DEFINE_PARAMS_WITH_MEMORYSPACE(rbnode_t* node_to_insert, CRSPTREE_PACKED_POINTER_TYPE(rbnode_t)* tree_root))
 	{
 		rbnode_t* current_node = node_to_insert;
-		rbnode_t* inserted_nodes_parent = node_to_insert->parent(CRSPTREE_PASS_MEMORYSPACE_PARAM);
-		if (inserted_nodes_parent)
+        auto packed_inserted_nodes_parent = node_to_insert->parent_packed();
+
+        rbnode_t* inserted_nodes_parent;
+		if (packed_inserted_nodes_parent != CRSPTREE_NULL_POINTER)
 		{
+            
 			while (true)
 			{
+                inserted_nodes_parent = CRSPTREE_TRANSLATE_NONNULL_POINTER(rbnode_t, packed_inserted_nodes_parent);
+
 				rbnode_parent_t parent = inserted_nodes_parent->m_parent;
 				if (inserted_nodes_parent->black())
 					break;
-				rbnode_t* current_parent_node = parent.node(CRSPTREE_PASS_MEMORYSPACE_PARAM);
+				rbnode_t* current_parent_node = parent.node_nonnull(CRSPTREE_PASS_MEMORYSPACE_PARAM);
 
-				uint32_t current_parent_node_subnode_offset = offset_for_left_if_neq(current_parent_node->left(CRSPTREE_PASS_MEMORYSPACE_PARAM), inserted_nodes_parent);
+				uint32_t current_parent_node_subnode_offset = offset_for_left_if_neq(current_parent_node->left_packed(), packed_inserted_nodes_parent);
 				uint32_t inv_current_parent_node_subnode_offset = rbnode_t::invert_lr_offset(current_parent_node_subnode_offset);
-				rbnode_t* current_parent_node_subnode = CRSPTREE_TRANSLATE_POINTER(rbnode_t, current_parent_node->subnode_from_offset(current_parent_node_subnode_offset));
 
-				if (!current_parent_node_subnode || current_parent_node_subnode->black())
+
+                auto packed_current_parent_node_subnode = current_parent_node->subnode_from_offset(current_parent_node_subnode_offset);
+
+                rbnode_t* current_parent_node_subnode; 
+
+				if (packed_current_parent_node_subnode == CRSPTREE_NULL_POINTER || (current_parent_node_subnode = CRSPTREE_TRANSLATE_NONNULL_POINTER(rbnode_t, packed_current_parent_node_subnode))->black())
 				{
 					if (CRSPTREE_TRANSLATE_POINTER(rbnode_t, inserted_nodes_parent->subnode_from_offset(current_parent_node_subnode_offset)) == current_node)
 					{
@@ -342,24 +368,27 @@ struct CRSPTREE_NAMESPACE {
 					current_parent_node->redden();
 
 					rotate_by_offset(CRSPTREE_PASS_PARAMS_WITH_MEMORYSPACE(current_parent_node, inv_current_parent_node_subnode_offset, tree_root));
-					inserted_nodes_parent = current_node->parent(CRSPTREE_PASS_MEMORYSPACE_PARAM);
-					if (!inserted_nodes_parent)
+                    packed_inserted_nodes_parent = current_node->parent_packed();
+					if (!packed_inserted_nodes_parent)
 						break;
 				}
 				else
 				{
-					current_node = parent.node(CRSPTREE_PASS_MEMORYSPACE_PARAM);
+                    //not totally sure this will always be nonnull
+                    current_node = parent.node_nonnull(CRSPTREE_PASS_MEMORYSPACE_PARAM);
+
 					current_parent_node_subnode->blacken();
 					inserted_nodes_parent->blacken();
 					current_parent_node->redden();
 
-					inserted_nodes_parent = current_parent_node->parent(CRSPTREE_PASS_MEMORYSPACE_PARAM);
-					if (!inserted_nodes_parent)
+                    packed_inserted_nodes_parent = current_parent_node->parent_packed();
+
+					if (!packed_inserted_nodes_parent)
 						break;
 				}
 			}
 		}
-		CRSPTREE_TRANSLATE_POINTER(rbnode_t, *tree_root)->blacken();
+		CRSPTREE_TRANSLATE_NONNULL_POINTER(rbnode_t, *tree_root)->blacken();
 	}
 
 	CRSPTREE_FORCEINLINE
