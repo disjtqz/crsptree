@@ -24,6 +24,14 @@
 
 */
 
+#if !defined(CRSPTREE_TRANSLATE_NONNULL_POINTER)
+#define CRSPTREE_TRANSLATE_NONNULL_POINTER(type, ...)   CRSPTREE_TRANSLATE_POINTER(type, __VA_ARGS__)
+#endif
+
+#if !defined(CRSPTREE_UNTRANSLATE_NONNULL_POINTER)
+#define CRSPTREE_UNTRANSLATE_NONNULL_POINTER(...)       CRSPTREE_UNTRANSLATE_POINTER(__VA_ARGS__)
+#endif
+
 namespace CRSPTREE_NAMESPACE {
 	//in the future, we may want to support 32-bit pointers within 64 bit processes
 	using crsptree_uptr_t = CRSPTREE_PACKED_UINTPTR_TYPE();
@@ -59,7 +67,9 @@ namespace CRSPTREE_NAMESPACE {
 		void set_node(CRSPTREE_DEFINE_PARAMS_WITH_MEMORYSPACE(rbnode_t* nde)) {
 			m_value =(crsptree_uptr_t)(CRSPTREE_UNTRANSLATE_POINTER(nde)) | (m_value & CRSPTREE_COLOR_MASK);
 		}
-
+        void set_node_nonnull(CRSPTREE_DEFINE_PARAMS_WITH_MEMORYSPACE(rbnode_t* nde)) {
+            m_value = (crsptree_uptr_t)(CRSPTREE_UNTRANSLATE_NONNULL_POINTER(nde)) | (m_value & CRSPTREE_COLOR_MASK);
+        }
 		operator crsptree_uptr_t() const {
 			return m_value;
 		}
@@ -103,6 +113,9 @@ namespace CRSPTREE_NAMESPACE {
 		void set_parent_node(CRSPTREE_DEFINE_PARAMS_WITH_MEMORYSPACE(rbnode_t* node)) {
 			m_parent.set_node(CRSPTREE_PASS_PARAMS_WITH_MEMORYSPACE(node));
 		}
+        void set_parent_node_nonnull(CRSPTREE_DEFINE_PARAMS_WITH_MEMORYSPACE(rbnode_t* node)) {
+            m_parent.set_node_nonnull(CRSPTREE_PASS_PARAMS_WITH_MEMORYSPACE(node));
+        }
 		rbnode_t* parent(CRSPTREE_MEMORYSPACE_PARAM) {
 			return m_parent.node(CRSPTREE_PASS_MEMORYSPACE_PARAM);
 		}
@@ -270,24 +283,25 @@ namespace CRSPTREE_NAMESPACE {
 		void rotate_by_offset(CRSPTREE_DEFINE_PARAMS_WITH_MEMORYSPACE(rbnode_t* node, uint32_t offset, CRSPTREE_PACKED_POINTER_TYPE(rbnode_t)* root))
 	{
 		uint32_t inv_offset = rbnode_t::invert_lr_offset(offset);
-		rbnode_t* child_for_offset = CRSPTREE_TRANSLATE_POINTER(rbnode_t, node->subnode_from_offset(offset));
+		rbnode_t* child_for_offset = CRSPTREE_TRANSLATE_NONNULL_POINTER(rbnode_t, node->subnode_from_offset(offset));
 		rbnode_t* input_nodes_parent = node->parent(CRSPTREE_PASS_MEMORYSPACE_PARAM);
-		rbnode_t* child_for_inverse_offset = CRSPTREE_TRANSLATE_POINTER(rbnode_t, child_for_offset->subnode_from_offset(inv_offset));
-		node->subnode_from_offset(offset) = CRSPTREE_UNTRANSLATE_POINTER(child_for_inverse_offset);
 
+        CRSPTREE_PACKED_POINTER_TYPE(rbnode_t) packed_child_for_inverse_offset = child_for_offset->subnode_from_offset(inv_offset);
 
-		if (child_for_inverse_offset) {
-			CRSPTREE_TRANSLATE_POINTER(rbnode_t, child_for_offset->subnode_from_offset(inv_offset))->set_parent_node(CRSPTREE_PASS_PARAMS_WITH_MEMORYSPACE(node));
+		node->subnode_from_offset(offset) = packed_child_for_inverse_offset;
+
+		if (packed_child_for_inverse_offset != CRSPTREE_NULL_POINTER) {
+			CRSPTREE_TRANSLATE_NONNULL_POINTER(rbnode_t, packed_child_for_inverse_offset)->set_parent_node_nonnull(CRSPTREE_PASS_PARAMS_WITH_MEMORYSPACE(node));
 		}
-		child_for_offset->subnode_from_offset(inv_offset) = CRSPTREE_UNTRANSLATE_POINTER(node);
+		child_for_offset->subnode_from_offset(inv_offset) = CRSPTREE_UNTRANSLATE_NONNULL_POINTER(node);
 
 		child_for_offset->set_parent_node(CRSPTREE_PASS_PARAMS_WITH_MEMORYSPACE(input_nodes_parent));
 		if (input_nodes_parent) {
 			//codegen for this index_child is fine
 			root = &input_nodes_parent->index_child(input_nodes_parent->right(CRSPTREE_PASS_MEMORYSPACE_PARAM) != node);
 		}
-		*root = CRSPTREE_UNTRANSLATE_POINTER(child_for_offset);
-		node->set_parent_node(CRSPTREE_PASS_PARAMS_WITH_MEMORYSPACE(child_for_offset));
+		*root = CRSPTREE_UNTRANSLATE_NONNULL_POINTER(child_for_offset);
+		node->set_parent_node_nonnull(CRSPTREE_PASS_PARAMS_WITH_MEMORYSPACE(child_for_offset));
 	}
 	CRSPTREE_NOINLINE
 		static void insert_node(CRSPTREE_DEFINE_PARAMS_WITH_MEMORYSPACE(rbnode_t* node_to_insert, CRSPTREE_PACKED_POINTER_TYPE(rbnode_t)* tree_root))
@@ -635,3 +649,6 @@ namespace CRSPTREE_NAMESPACE {
 #undef     CRSPTREE_UNTRANSLATE_POINTER
 
 #undef     CRSPTREE_ENABLE_ITERATORS
+
+#undef     CRSPTREE_TRANSLATE_NONNULL_POINTER
+#undef     CRSPTREE_UNTRANSLATE_NONNULL_POINTER

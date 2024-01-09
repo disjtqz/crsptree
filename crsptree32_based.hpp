@@ -37,9 +37,12 @@ static inline uint32_t untranslate_crsptree_32_based(unsigned char* memory_space
     }
 }
 
-#define     CRSPTREE_TRANSLATE_POINTER(type, ...)       ((type*)translate_crsptree_32_based(memory_space, __VA_ARGS__))
+#define     CRSPTREE_TRANSLATE_POINTER(type, ...)               ((type*)translate_crsptree_32_based(memory_space, __VA_ARGS__))
 
-#define     CRSPTREE_UNTRANSLATE_POINTER(...)           untranslate_crsptree_32_based(memory_space, (void*)(__VA_ARGS__))
+#define     CRSPTREE_UNTRANSLATE_POINTER(...)                   untranslate_crsptree_32_based(memory_space, (void*)(__VA_ARGS__))
+
+#define     CRSPTREE_TRANSLATE_NONNULL_POINTER(type, ...)       ((type*) (&memory_space[__VA_ARGS__]))
+#define     CRSPTREE_UNTRANSLATE_NONNULL_POINTER(...)           static_cast<uint32_t>(((unsigned char*)(__VA_ARGS__)) - memory_space)
 
 #define     CRSPTREE_ENABLE_ITERATORS       0
 
