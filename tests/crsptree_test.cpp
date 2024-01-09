@@ -3,8 +3,12 @@
 #include <climits>
 #include <intrin.h>
 #include "crsptree.hpp"
+#include "crsptree32_based.hpp"
 #include <utility>
-using namespace crsptree;
+#include <Windows.h>
+using namespace crsptree32_based;
+
+static unsigned char* program_base = nullptr;
 struct testdata_t {
 	const char* text;
 	int numberkey;
@@ -31,13 +35,13 @@ static testdata_t testdataxxx[] = {
 
 	{"54242clemency", 71}
 };
-static rbnode_t* testdata_root = nullptr;
+static uint32_t testdata_root = 0;
 static testdata_t testdata_null_filter{ "", 0 };
 
 static std::pair<testdata_t*, insertion_position_t> find_with_hint(int key) {
 	std::pair<testdata_t*, insertion_position_t> result{};
 
-	result.first = find_entry_for_intrusive_tree<testdata_t, crsptree_offsetof_m(testdata_t, m_node)>(&testdata_root, key, [](testdata_t* currtestdata, int r) {
+	result.first = find_entry_for_intrusive_tree<testdata_t, crsptree_offsetof_m(testdata_t, m_node)>(program_base, &testdata_root, key, [](testdata_t* currtestdata, int r) {
 		return currtestdata->numberkey - r;
 		}, &result.second);
 	return result;
@@ -52,14 +56,14 @@ void mark_all_forward() {
 
 	clear_test_marker();
 
-	rbnode_t* currnode = head_node(&testdata_root);
+	rbnode_t* currnode = head_node(program_base, &testdata_root);
 
 	while (currnode) {
 
 		testdata_t* tdata = crsptree_containing_record_m(currnode, testdata_t, m_node);
 		tdata->marker1 = true;
 
-		currnode = next_node(currnode);
+		currnode = next_node(program_base, currnode);
 	}
 }
 
@@ -67,13 +71,13 @@ void mark_all_forward() {
 void mark_all_reverse() {
 	clear_test_marker();
 
-	rbnode_t* currnode = tail_node(&testdata_root);
+	rbnode_t* currnode = tail_node(program_base, &testdata_root);
 
 	while (currnode) {
 		testdata_t* tdata = crsptree_containing_record_m(currnode, testdata_t, m_node);
 		tdata->marker1 = true;
 
-		currnode = prev_node(currnode);
+		currnode = prev_node(program_base, currnode);
 	}
 }
 
@@ -122,10 +126,10 @@ void verify_all_other_nodes_findable(testdata_t* exclude) {
 
 }
 void reinsert_node(testdata_t* node) {
-	node->m_node.initialize();
+	node->m_node.initialize(program_base);
 	auto [unusedptr, tmphint] = find_with_hint(node->numberkey);
 
-	tmphint.insert(&node->m_node, &testdata_root);
+	tmphint.insert(program_base, &node->m_node, &testdata_root);
 
 }
 void test_tree_erasure(testdata_t* node_to_test_with) {
@@ -138,7 +142,7 @@ void test_tree_erasure(testdata_t* node_to_test_with) {
 
 	verify_node_findable(node_to_test_with);
 
-	erase_node(&node_to_test_with->m_node, &testdata_root);
+	erase_node(program_base, &node_to_test_with->m_node, &testdata_root);
 	verify_node_not_findable(node_to_test_with);
 
 	mark_all_forward();
@@ -164,6 +168,7 @@ void test_tree_erasure(testdata_t* node_to_test_with) {
 
 int main() {
 
+    program_base = (unsigned char*)GetModuleHandleA(nullptr);
 	for (auto& entry : testdataxxx) {
 		reinsert_node(&entry);
 	}

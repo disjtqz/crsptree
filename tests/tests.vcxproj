@@ -133,6 +133,14 @@
   <ItemGroup>
     <ClCompile Include="crsptree_test.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\crsptree.hpp" />
+    <ClInclude Include="..\crsptree32_based.hpp" />
+    <ClInclude Include="..\crsptree32.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\crsptree_namespace.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
