@@ -6,7 +6,11 @@
 #include "crsptree32_based.hpp"
 #include <utility>
 #include <Windows.h>
-using namespace crsptree32_based;
+
+using crsptree_impl = crsptree32_based;
+
+using rbnode_t = typename crsptree_impl::rbnode_t;
+using insertion_position_t = typename crsptree_impl::insertion_position_t;
 
 static unsigned char* program_base = nullptr;
 struct testdata_t {
@@ -41,7 +45,7 @@ static testdata_t testdata_null_filter{ "", 0 };
 static std::pair<testdata_t*, insertion_position_t> find_with_hint(int key) {
 	std::pair<testdata_t*, insertion_position_t> result{};
 
-	result.first = find_entry_for_intrusive_tree<testdata_t, crsptree_offsetof_m(testdata_t, m_node)>(program_base, &testdata_root, key, [](testdata_t* currtestdata, int r) {
+	result.first = crsptree_impl::find_entry_for_intrusive_tree<testdata_t, crsptree_offsetof_m(testdata_t, m_node)>(program_base, &testdata_root, key, [](testdata_t* currtestdata, int r) {
 		return currtestdata->numberkey - r;
 		}, &result.second);
 	return result;
@@ -56,14 +60,14 @@ void mark_all_forward() {
 
 	clear_test_marker();
 
-	rbnode_t* currnode = head_node(program_base, &testdata_root);
+	rbnode_t* currnode = crsptree_impl::head_node(program_base, &testdata_root);
 
 	while (currnode) {
 
 		testdata_t* tdata = crsptree_containing_record_m(currnode, testdata_t, m_node);
 		tdata->marker1 = true;
 
-		currnode = next_node(program_base, currnode);
+		currnode = crsptree_impl::next_node(program_base, currnode);
 	}
 }
 
@@ -71,13 +75,13 @@ void mark_all_forward() {
 void mark_all_reverse() {
 	clear_test_marker();
 
-	rbnode_t* currnode = tail_node(program_base, &testdata_root);
+	rbnode_t* currnode = crsptree_impl::tail_node(program_base, &testdata_root);
 
 	while (currnode) {
 		testdata_t* tdata = crsptree_containing_record_m(currnode, testdata_t, m_node);
 		tdata->marker1 = true;
 
-		currnode = prev_node(program_base, currnode);
+		currnode = crsptree_impl::prev_node(program_base, currnode);
 	}
 }
 
@@ -142,7 +146,7 @@ void test_tree_erasure(testdata_t* node_to_test_with) {
 
 	verify_node_findable(node_to_test_with);
 
-	erase_node(program_base, &node_to_test_with->m_node, &testdata_root);
+    crsptree_impl::erase_node(program_base, &node_to_test_with->m_node, &testdata_root);
 	verify_node_not_findable(node_to_test_with);
 
 	mark_all_forward();

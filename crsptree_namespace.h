@@ -17,6 +17,10 @@
 
 	CRSPTREE_UNTRANSLATE_POINTER(...)				- converts an unpacked pointer to a packed one
 
+    CRSPTREE_TRANSLATE_NONNULL_POINTER(type, ...)	- Converts a packed pointer without checking for null. if not provided, CRSPTREE_TRANSLATE_POINTER is used instead
+
+    CRSPTREE_UNTRANSLATE_NONNULL_POINTER(...)		- Converts an unpacked pointer without checking for null. if not provided, CRSPTREE_UNTRANSLATE_POINTER is used instead
+
 	CRSPTREE_NULL_POINTER							- the value of a null pointer for this instantiation 
 
 	CRSPTREE_ENABLE_ITERATORS						- enables/disables forward_iterate function, which does not support memory views atm
@@ -32,7 +36,7 @@
 #define CRSPTREE_UNTRANSLATE_NONNULL_POINTER(...)       CRSPTREE_UNTRANSLATE_POINTER(__VA_ARGS__)
 #endif
 
-namespace CRSPTREE_NAMESPACE {
+struct CRSPTREE_NAMESPACE {
 	//in the future, we may want to support 32-bit pointers within 64 bit processes
 	using crsptree_uptr_t = CRSPTREE_PACKED_UINTPTR_TYPE();
 
@@ -175,7 +179,14 @@ namespace CRSPTREE_NAMESPACE {
 		CRSPTREE_PACKED_POINTER_TYPE(rbnode_t)& index_child(uint32_t index) {
 			return m_right_to_left[index];
 		}
+     
 	};
+
+    static constexpr uint32_t offsetof_left = crsptree_offsetof_m(rbnode_t, m_right_to_left[1]);
+    static constexpr uint32_t offsetof_right = crsptree_offsetof_m(rbnode_t, m_right_to_left[0]);
+
+ 
+
 	static constexpr uint32_t node_offsetof_right = crsptree_offsetof_m(rbnode_t, m_right_to_left[0]);
 	static constexpr uint32_t node_offsetof_left = crsptree_offsetof_m(rbnode_t, m_right_to_left[1]);
 
@@ -191,13 +202,8 @@ namespace CRSPTREE_NAMESPACE {
 		offset += static_cast<uint32_t>(x == y) * sizeof(CRSPTREE_PACKED_UINTPTR_TYPE());
 		return offset;
 	}
-	namespace _detail {
-		constexpr uint32_t offsetof_left = crsptree_offsetof_m(rbnode_t, m_right_to_left[1]);
-		constexpr uint32_t offsetof_right = crsptree_offsetof_m(rbnode_t, m_right_to_left[0]);
 
-		static_assert(rbnode_t::invert_lr_offset(offsetof_left) == offsetof_right);
-		static_assert(rbnode_t::invert_lr_offset(offsetof_right) == offsetof_left);
-	}
+    
 	CRSPTREE_PUREISH
 	CRSPTREE_NOINLINE
 	static rbnode_t* heads_or_tails(CRSPTREE_DEFINE_PARAMS_WITH_MEMORYSPACE(CRSPTREE_PACKED_POINTER_TYPE(rbnode_t)* tree_root, uint32_t offset_for_first_or_last))
@@ -627,7 +633,10 @@ namespace CRSPTREE_NAMESPACE {
 		return rb_nodes_iter_t<TContainer, delta_from_node_to_object>{root};
 	}
 #endif
-}
+};
+
+static_assert(CRSPTREE_NAMESPACE::rbnode_t::invert_lr_offset(CRSPTREE_NAMESPACE::offsetof_left) == CRSPTREE_NAMESPACE::offsetof_right);
+static_assert(CRSPTREE_NAMESPACE::rbnode_t::invert_lr_offset(CRSPTREE_NAMESPACE::offsetof_right) == CRSPTREE_NAMESPACE::offsetof_left);
 
 //clear all macros
 
@@ -652,3 +661,4 @@ namespace CRSPTREE_NAMESPACE {
 
 #undef     CRSPTREE_TRANSLATE_NONNULL_POINTER
 #undef     CRSPTREE_UNTRANSLATE_NONNULL_POINTER
+
