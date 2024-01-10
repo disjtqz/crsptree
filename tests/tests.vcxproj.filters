@@ -29,6 +29,9 @@
     <ClInclude Include="..\crsptree32_based.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\crsptree16_indexed.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\crsptree_namespace.h">

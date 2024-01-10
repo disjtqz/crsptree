@@ -4,10 +4,11 @@
 #include <intrin.h>
 #include "crsptree.hpp"
 #include "crsptree32_based.hpp"
+#include "crsptree16_indexed.hpp"
 #include <utility>
 #include <Windows.h>
 
-using crsptree_impl = crsptree32_based;
+using crsptree_impl = crsptree16_indexed<24>;
 
 using rbnode_t = typename crsptree_impl::rbnode_t;
 using insertion_position_t = typename crsptree_impl::insertion_position_t;
@@ -22,7 +23,10 @@ struct testdata_t {
 	bool marker1;
 	constexpr testdata_t(const char* txt, int key) : text(txt), numberkey(key), m_node{}, marker1(false) {}
 };
+
+static constexpr size_t testdata_size = sizeof(testdata_t);
 static testdata_t testdataxxx[] = {
+    {"null_node", 0},
 	{"hello", 4945},
 	{"goodbye", 69},
 	{"nice car", 492932398},
@@ -39,7 +43,9 @@ static testdata_t testdataxxx[] = {
 
 	{"54242clemency", 71}
 };
-static uint32_t testdata_root = 0;
+
+static constexpr uint32_t NUM_TEST_NODES = sizeof(testdataxxx) / sizeof(testdataxxx[0]);
+static uint16_t testdata_root = 0;
 static testdata_t testdata_null_filter{ "", 0 };
 
 static std::pair<testdata_t*, insertion_position_t> find_with_hint(int key) {
@@ -51,9 +57,10 @@ static std::pair<testdata_t*, insertion_position_t> find_with_hint(int key) {
 	return result;
 }
 void clear_test_marker() {
-	for (auto&& datum : testdataxxx) {
-		datum.marker1 = false;
-	}
+
+    for (uint32_t node_index = 1; node_index < NUM_TEST_NODES; ++node_index) {
+        testdataxxx[node_index].marker1 = false;
+    }
 }
 
 void mark_all_forward() {
@@ -86,8 +93,8 @@ void mark_all_reverse() {
 }
 
 void verify_all_marked_except(testdata_t* excl = &testdata_null_filter) {
-	for (auto& tdata : testdataxxx) {
-
+    for (uint32_t node_index = 1; node_index < NUM_TEST_NODES; ++node_index) {
+        auto& tdata = testdataxxx[node_index];
 		if (&tdata == excl) {
 			continue;
 		}
@@ -117,8 +124,8 @@ void verify_node_not_findable(testdata_t* node) {
 }
 void verify_all_other_nodes_findable(testdata_t* exclude) {
 	//make sure every other node can still be found
-	for (auto& originaldata : testdataxxx) {
-
+    for (uint32_t node_index = 1; node_index < NUM_TEST_NODES; ++node_index) {
+        auto& originaldata = testdataxxx[node_index];
 		if (&originaldata == exclude) {
 			continue;
 		}
@@ -172,13 +179,14 @@ void test_tree_erasure(testdata_t* node_to_test_with) {
 
 int main() {
 
-    program_base = (unsigned char*)GetModuleHandleA(nullptr);
-	for (auto& entry : testdataxxx) {
-		reinsert_node(&entry);
+    program_base = reinterpret_cast<unsigned char*>(&testdataxxx[0].m_node);//(unsigned char*)GetModuleHandleA(nullptr);
+    for (uint32_t node_index = 1; node_index < NUM_TEST_NODES; ++node_index) {
+		reinsert_node(&testdataxxx[node_index]);
 	}
 
-	for (auto&& entry : testdataxxx) {
+    for (uint32_t node_index = 1; node_index < NUM_TEST_NODES; ++node_index) {
 
+        auto& entry = testdataxxx[node_index];
 		insertion_position_t tmphint{  };
 
 		auto [gotentry, unusedhint] = find_with_hint(entry.numberkey);
@@ -191,7 +199,8 @@ int main() {
 		}
 	}
 
-	for (auto&& entry : testdataxxx) {
+    for (uint32_t node_index = 1; node_index < NUM_TEST_NODES; ++node_index) {
+        auto& entry = testdataxxx[node_index];
 		test_tree_erasure(&entry);
 
 	}

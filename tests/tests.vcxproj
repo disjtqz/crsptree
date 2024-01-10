@@ -135,6 +135,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\crsptree.hpp" />
+    <ClInclude Include="..\crsptree16_indexed.hpp" />
     <ClInclude Include="..\crsptree32_based.hpp" />
     <ClInclude Include="..\crsptree32.hpp" />
   </ItemGroup>
