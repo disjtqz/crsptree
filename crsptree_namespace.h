@@ -318,6 +318,9 @@ struct CRSPTREE_NAMESPACE {
 		static
 		void rotate_by_offset(CRSPTREE_DEFINE_PARAMS_WITH_MEMORYSPACE(rbnode_t* node, uint32_t offset, CRSPTREE_PACKED_POINTER_TYPE(rbnode_t)* root))
 	{
+
+        static_assert(rbnode_t::invert_lr_offset(offsetof_left) == offsetof_right);
+        static_assert(rbnode_t::invert_lr_offset(offsetof_right) == offsetof_left);
 		uint32_t inv_offset = rbnode_t::invert_lr_offset(offset);
 		rbnode_t* child_for_offset = CRSPTREE_TRANSLATE_NONNULL_POINTER(rbnode_t, node->subnode_from_offset(offset));
 		rbnode_t* input_nodes_parent = node->parent(CRSPTREE_PASS_MEMORYSPACE_PARAM);
@@ -679,8 +682,6 @@ struct CRSPTREE_NAMESPACE {
 #endif
 };
 
-static_assert(CRSPTREE_NAMESPACE::rbnode_t::invert_lr_offset(CRSPTREE_NAMESPACE::offsetof_left) == CRSPTREE_NAMESPACE::offsetof_right);
-static_assert(CRSPTREE_NAMESPACE::rbnode_t::invert_lr_offset(CRSPTREE_NAMESPACE::offsetof_right) == CRSPTREE_NAMESPACE::offsetof_left);
 
 //clear all macros
 
