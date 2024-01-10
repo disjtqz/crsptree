@@ -25,7 +25,9 @@
 
 	CRSPTREE_ENABLE_ITERATORS						- enables/disables forward_iterate function, which does not support memory views atm
 
+    CRSPTREE_INSTANTIATION_TEMPLATE_PARAM_LIST      - expanded before struct CRSPTREE_NAMESPACE if provided, can be used to create templated implementations
 
+    CRSPTREE_COLOR_BITMASK                          - mask to use for encoding color in the parent node
 */
 
 #if !defined(CRSPTREE_TRANSLATE_NONNULL_POINTER)
@@ -36,12 +38,22 @@
 #define CRSPTREE_UNTRANSLATE_NONNULL_POINTER(...)       CRSPTREE_UNTRANSLATE_POINTER(__VA_ARGS__)
 #endif
 
+
+#if defined(CRSPTREE_INSTANTIATION_TEMPLATE_PARAM_LIST)
+CRSPTREE_INSTANTIATION_TEMPLATE_PARAM_LIST
+#endif
+
+#if !defined(CRSPTREE_COLOR_BITMASK)
+#define     CRSPTREE_COLOR_BITMASK      1
+#endif
+
+
 struct CRSPTREE_NAMESPACE {
 	//in the future, we may want to support 32-bit pointers within 64 bit processes
 	using crsptree_uptr_t = CRSPTREE_PACKED_UINTPTR_TYPE();
 
 
-	static constexpr crsptree_uptr_t CRSPTREE_COLOR_MASK = 1;
+	static constexpr crsptree_uptr_t CRSPTREE_COLOR_MASK = CRSPTREE_COLOR_BITMASK;
 	static constexpr crsptree_uptr_t CRSPTREE_PARENT_MASK = ~CRSPTREE_COLOR_MASK;
 
 
@@ -108,7 +120,7 @@ struct CRSPTREE_NAMESPACE {
 		}
 
 		void blacken() {
-			set_color(1);
+			set_color(CRSPTREE_COLOR_MASK);
 		}
 		void redden() {
 			set_color(0);
@@ -707,3 +719,6 @@ struct CRSPTREE_NAMESPACE {
 #undef     CRSPTREE_TRANSLATE_NONNULL_POINTER
 #undef     CRSPTREE_UNTRANSLATE_NONNULL_POINTER
 
+#undef     CRSPTREE_INSTANTIATION_TEMPLATE_PARAM_LIST
+
+#undef     CRSPTREE_COLOR_BITMASK
